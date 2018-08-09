@@ -19,33 +19,40 @@
 <button onclick="rotateGroup(45)">rotate 45deg</button>
 <button onclick="rotateGroup(-45)">rotate -45deg</button>
 
-<canvas id="c" width="850" height="850" style="border:1px solid #ccc"></canvas>
+<button onclick="outputPointLocation()">point locations</button>
+
+<canvas id="c" width="850" height="850" style="border:1px dashed #ccc"></canvas>
 
 
 <script src="scripts/fabric.js"></script>
 <script>
-  const canvas = new fabric.Canvas('c');
+  const canvas = new fabric.Canvas('c', {centeredRotation: true});
 
-  let line = null;
-  let isDown = false;
 
-  let startPoint = null;
-  let endPoint = null;
+  let isDown = false,
+    isImageLoaded = false
 
-  let count = 0;
+  let startPoint = null,
+    endPoint = null
+
+  let count = 0
 
   let shouldAction = true
 
-  let circle = null
-  let circle0 = null
+  let vertex = null
   let line = null,
-    nextLine = null
-
-
-  let line0 = null
+    startVertex = null
 
   let input_image = document.getElementById('input_image')
   let image;
+  const imageWidth = 640
+  const imageHeight = 480
+
+  let leftPadding = 0,
+    topPadding = 0
+
+  let horizontalScaleFactor = 1,
+    verticalScaleFactor = 1
 
   input_image.onchange = function (e) {
 
@@ -55,28 +62,47 @@
       fabric.Image.fromURL(image.src, oImg => {
         // oImg.set('width', 640)
         // oImg.scale(640 / oImg.width)
-        oImg.set('left', (canvas.width - 640) / 2)//(canvas.width - 480) / 2)
-        // oImg.set('left', 60)//(canvas.width - 480) / 2)
-        // console.log('left', (canvas.width - 640) / 2)//(canvas.width - 480) / 2)
-        // oImg.set('left', (canvas.get('width') - 480) / 2)//(canvas.width - 480) / 2)
-        oImg.set('top', (canvas.height - 480) / 2)
 
-        oImg.set('scaleX', 640 / oImg.width)
-        oImg.set('scaleY', 480 / oImg.height)
+        leftPadding = (canvas.width - imageWidth) / 2
+        topPadding = (canvas.height - imageHeight) / 2
+        horizontalScaleFactor = imageWidth / oImg.width
+        verticalScaleFactor = imageHeight / oImg.height
+
+        oImg.set('left', leftPadding)
+        oImg.set('top', topPadding)
+
+        oImg.set('scaleX', horizontalScaleFactor)
+        oImg.set('scaleY', verticalScaleFactor)
 
         canvas.setBackgroundImage(oImg);
-        canvas.renderAll()
 
         // oImg.set('selectable', false)
         // oImg.set('hasControl', false)
         // console.log(canvas.width, canvas.get('width'))
-        // oImg.setHeight(640)
-        // oImg.scaleToWidth(640)
+        // oImg.setHeight(imageWidth)
+        // oImg.scaleToWidth(imageWidth)
         // / oImg.width, 0.1)
-        // oImg.scaleToHeight(480)
+        // oImg.scaleToHeight(imageHeight)
         // / oImg.height)
         // canvas.add(oImg)
         console.log('oImg', oImg)
+
+        const imageBorder = new fabric.Rect({
+          top: topPadding,
+          left: leftPadding,
+          width: imageWidth,
+          height: imageHeight,
+          fill: 'rgba(0,0,0,0)',
+          stroke: '#6b6b6b',
+          strokeWidth: 1,
+          selectable: false,
+        });
+        canvas.add(imageBorder);
+
+
+        isImageLoaded = true
+
+        canvas.renderAll()
       })
       console.log(image)
     }
@@ -86,55 +112,73 @@
 
   console.log(input_image)
 
+  function isPointPositionLegal(x, y) {
+    return x > leftPadding && y > topPadding && x < canvas.width - leftPadding && y < canvas.height - topPadding
+  }
+
   canvas.on('mouse:down', function (o) {
-    if (!shouldAction) {
+    if (!shouldAction || !isImageLoaded) {
       return
     }
+
     const pointer = canvas.getPointer(o.e);
-    if (count === 0) {
-      startPoint = pointer;
+
+    if (!isPointPositionLegal(pointer.x, pointer.y)) {
+      return
     }
 
     if (line !== null) {
-      line.set({x2: endPoint.x, y2: endPoint.y});
+      line.set({x2: pointer.x, y2: pointer.y});
     }
 
-    const points = [pointer.x, pointer.y, pointer.x, pointer.y];
-    nextLine = new fabric.Line(points, {
-      strokeWidth: 5,
-      fill: 'red',
-      stroke: 'red',
-      // originX: 'center',
-      // originY: 'center',
-    });
-
-    // line.hasRotatingPoint = false
-
-
-    canvas.add(nextLine);
-    count++;
-
-    if (circle) {
-      circle.line2 = line
-    }
-
-    nextCircle = makeCircle(pointer.x, pointer.y, null, line);
+    vertex = makeVertex(pointer.x, pointer.y, line || null, null);
 
     if (count === 0) {
-      circle0 = makeCircle(pointer.x, pointer.y, null, line);
-      canvas.add(circle0)
-      return
+      startPoint = pointer;
+      startVertex = vertex
     }
+
+    if (count === 3) {
+      line = makeLine(pointer, startPoint)
+    } else {
+      line = makeLine(pointer, pointer)
+    }
+    canvas.add(line);
+
+    vertex.line2 = line
+    // line.hasRotatingPoint = false
+    canvas.add(vertex)
+
+    if (count === 3) {
+      startVertex.line1 = line
+      shouldAction = false
+    }
+
+    count++;
 
     canvas.renderAll()
   });
 
+  function makeLine(p1, p2) {
+    return new fabric.Line([p1.x, p1.y, p2.x, p2.y], {
+      strokeWidth: 5,
+      stroke: 'red',
+      selectable: false
+    })
+  }
+
   canvas.on('mouse:move', function (o) {
+
     if (!shouldAction) {
       return
     }
 
     const pointer = canvas.getPointer(o.e);
+
+    if (!isPointPositionLegal(pointer.x, pointer.y)) {
+      return
+    }
+
     endPoint = pointer;
 
     if (!isDown || count === 0) {
@@ -145,48 +189,55 @@
     canvas.renderAll();
   });
 
-  canvas.on('mouse:up', function (o) {
-    if (!shouldAction) {
-      return
-    }
-    if (count === 4) {
-
-      circle.line2 = line0
-
-      line.set({x2: startPoint.x, y2: startPoint.y});
-      canvas.renderAll();
-      count = 0;
-      line = null;
-      endPoint = null;
-      startPoint = null;
-      console.log('one done')
-      shouldAction = false
-    }
-  });
+  // canvas.on('mouse:up', function (o) {
+  //   if (!shouldAction) {
+  //     return
+  //   }
+  //   if (count === 4) {
+  //     vertex && (vertex.line2 = line0)
+  //
+  //     line.set({x2: startPoint.x, y2: startPoint.y});
+  //     canvas.renderAll();
+  //     count = 0;
+  //     line = null;
+  //     endPoint = null;
+  //     startPoint = null;
+  //     console.log('one done')
+  //     shouldAction = false
+  //   }
+  // });
 
   canvas.on('object:moving', function (e) {
+
+
     var p = e.target;
+    // console.log(p)
+
+    if (!isPointPositionLegal(p.left, p.top)) {
+      return
+    }
+
     p.line1 && p.line1.set({'x2': p.left, 'y2': p.top});
     p.line2 && p.line2.set({'x1': p.left, 'y1': p.top});
     canvas.renderAll();
   });
 
-  function makeCircle(left, top, line1, line2, line3, line4) {
-    const c = new fabric.Circle({
+  function makeVertex(left, top, line1, line2) {
+    let c = new fabric.Circle({
       left: left,
       top: top,
       strokeWidth: 2,
-      radius: 4,
-      fill: '#fff',
-      stroke: '#666'
+      radius: 5,
+      fill: '#ff6633',
+      stroke: '#c8fb11',
+      originX: 'center',
+      originY: 'center',
     });
 
     c.hasControls = c.hasBorders = false;
 
     c.line1 = line1;
     c.line2 = line2;
-    c.line3 = line3;
-    c.line4 = line4;
 
     return c;
   }
@@ -227,7 +278,8 @@
 
     rotateAngle -= 45
 
-    objs.forEach(o => o.set('centeredRotation', false).set('angle', rotateAngle))
+    // objs.forEach(o => o.set('centeredRotation', false).set('angle', rotateAngle))
+    objs.forEach(o => o.set('angle', rotateAngle))
 
     console.log('before rotate', group)
     // group.rotate(rotateAngle)
@@ -237,18 +289,21 @@
 
     canvas.backgroundImage && canvas.backgroundImage.rotate(rotateAngle)
     canvas.renderAll()
-
   }
 
   function rotateArtBoard(angle) {
     canvas.discardActiveObject()
     let activeObject = new fabric.ActiveSelection(canvas.getObjects(), {canvas: canvas})
+    // let activeObject = new fabric.ActiveSelection(canvas.getObjects())
     canvas.setActiveObject(activeObject)
+    console.log('active object', activeObject)
     if (activeObject !== null) {
       activeObject.rotate(angle)
       canvas.discardActiveObject()
 
-      // canvas.backgroundImage && canvas.backgroundImage.rotate(angle)
+      rotateAngle += angle
+      canvas.backgroundImage && canvas.backgroundImage.rotate(rotateAngle)
+
       canvas.renderAll()
     }
   }
@@ -256,9 +311,26 @@
   function rotateGroup(angle) {
     let group = new fabric.Group(canvas.getObjects())
     group.rotate(angle)
-    canvas.centerObject(group)
-    group.setCoords()
+    // canvas.centerObject(group)
+    // group.setCoords()
     canvas.renderAll()
+  }
+
+  function transformHorizontalCoord(c) {
+    return (c - leftPadding) / horizontalScaleFactor
+  }
+
+  function transformVerticalCoord(c) {
+    return (c - topPadding) / verticalScaleFactor
+  }
+
+  function outputPointLocation() {
+    let positions = []
+    let objs = canvas.getObjects().filter(o => o.type === 'circle')
+    objs.forEach(o => {
+      positions.push([transformHorizontalCoord(o.left), transformVerticalCoord(o.top)])
+    })
+    console.log(positions)
   }
 </script>
 </body>
