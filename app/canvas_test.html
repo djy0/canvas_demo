@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Title</title>
+</head>
+<body>
+
+
+<label for="img_file">input image</label>
+<input id='img_file' type="file" accept="image/*">
+<!--<div style="position: relative;left: 50vw; top: 50vh; margin-left: -50%;margin-top: -50%;">-->
+<canvas id="canvas" style="position: relative;left: 50vw; top: 50vh; margin-left: -50%;margin-top: -50%;">
+</canvas>
+<script>
+  let canvas = document.getElementById('canvas')
+  console.log(canvas)
+  const ctx = canvas.getContext('2d')
+  let x = 0
+  let image_width = 0, image_height = 0,
+    canvas_left = canvas.offsetLeft, canvas_top = canvas.offsetTop,
+    mouse_left = -1, mouse_top = -1,
+    canvas_mouse_x = -1, canvas_mouse_y = -1,
+
+    img_file = document.getElementById('img_file')
+  let img;
+
+  img_file.onchange = (event) => {
+    // ctx.clearRect(0, 0, ctx.width, ctx.height)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    console.log(event)
+    img = new Image()
+    // canvas.drawImage(event.target.files[0])
+    img.onload = (event) => {
+      // canvas.height = image_height = event.path[0].height
+      // canvas.width = image_width = event.path[0].width
+      canvas.height = image_height = img.height
+      canvas.width = image_width = img.width
+
+      canvas_left = canvas.offsetLeft, canvas_top = canvas.offsetTop,
+        ctx.drawImage(img, 0, 0)
+      console.log(img)
+      console.log('image load event', event)
+      console.log(image_height, image_width, canvas_left, canvas_top)
+    }
+    img.src = URL.createObjectURL(event.target.files[0])
+  }
+
+  let start_x = 0, start_y = 0
+
+  let showLine = false
+  document.onmousemove = (event) => {
+    // console.log('Mouse moving', event)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    redraw()
+    mouse_left = event.pageX
+    mouse_top = event.pageY
+    canvas_mouse_x = mouse_left - canvas_left
+    canvas_mouse_y = mouse_top - canvas_top
+    if (showLine) {
+      drawLineWhenMouseMove(start_x, start_y)
+    }
+  }
+
+  function redraw() {
+    if (img) {
+      ctx.drawImage(img, 0, 0)
+    }
+
+    if (points.length === 0) return
+    let prev_p = points[0]
+    let count = 0;
+    ctx.beginPath()
+    ctx.strokeStyle = 'red'
+    ctx.strokeWidth = 3
+
+
+    for (let p of points) {
+      if (count === 4) {
+        // return;
+      }
+      ctx.moveTo(prev_p.x, prev_p.y)
+      ctx.lineTo(p.x, p.y)
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2)
+
+      prev_p = p
+      count++
+
+      if (count === 4) {
+        ctx.closePath()
+        ctx.stroke()
+        document.onmousemove = undefined
+      }
+      ctx.stroke()
+    }
+  }
+
+  let is_mouse_click_in_canvas = () => {
+    console.log(this)
+    return canvas_mouse_x >= 0 &&
+      canvas_mouse_x <= canvas.width &&
+      canvas_mouse_y >= 0 &&
+      canvas_mouse_y <= canvas.height
+  }
+
+  let state = 'init'
+  let point_count = 0
+  let points = []
+  document.onmouseup = (event => {
+    state = 'begin'
+    console.log(event.pageX, event.pageY)
+    mouse_left = event.pageX
+    mouse_top = event.pageY
+    canvas_mouse_x = mouse_left - canvas_left
+    canvas_mouse_y = mouse_top - canvas_top
+    console.log(canvas_left, canvas_top)
+    console.log(canvas_mouse_x, canvas_mouse_y)
+    console.log('inside canvas ? ', is_mouse_click_in_canvas())
+    if (point_count <= 3) {
+      point_count++;
+    } else {
+      ctx.closePath()
+    }
+    if (is_mouse_click_in_canvas()) {
+
+      start_x = canvas_mouse_x
+      start_y = canvas_mouse_y
+      showLine = true
+
+      points.push({x: canvas_mouse_x, y: canvas_mouse_y})
+      ctx.beginPath()
+      ctx.arc(canvas_mouse_x, canvas_mouse_y, 2, 0, 2 * Math.PI)
+      ctx.strokeStyle = 'red'
+      ctx.stroke()
+    }
+  })
+
+  function drawLineWhenMouseMove(x, y) {
+    // console.log('Draw when mouse move', x, y, canvas_mouse_x, canvas_mouse_y)
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(canvas_mouse_x, canvas_mouse_y)
+    ctx.strokeWidth = 3
+    ctx.strokeStyle = 'red'
+    ctx.stroke()
+  }
+
+  function drawIt() {
+    requestAnimationFrame(drawIt)
+    ctx.clearRect(0, 0, 140, 100)
+    ctx.beginPath()
+    ctx.fillStyle = 'rgba(230, 100, 80, 0.8)'
+    ctx.fillRect(x, 20, 40, 60)
+    x = x > 60 ? 0 : x + 10
+  }
+
+  // drawIt()
+  window.onload = (a, b) => {
+    console.log(a, b)
+  }
+  document.onreadystatechange = (a, b) => {
+    console.log('doc ready')
+    console.log(a, b, this)
+  }
+  ;
+  document.onreadystatechange = function (a, b) {
+    console.log('doc ready')
+    console.log(a, b, this)
+  };
+  ctx.beginPath()
+  ctx.lineTo(100, 200)
+  ctx.lineTo(200, 800)
+  ctx.strokeStyle = 'red'
+  ctx.lineWidth = 5
+  ctx.stroke()
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.moveTo(0, 0)
+  ctx.lineTo(20, 20)
+  ctx.lineTo(300, 600)
+  ctx.lineWidth = 5
+  ctx.strokeStyle = 'green'
+  ctx.stroke()
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(200, 300, 100, 0, 240 / 360 * Math.PI * 2)
+  ctx.arc(400, 400, 100, 0, 240 / 360 * Math.PI * 2)
+  ctx.lineWidth = 2
+  ctx.strokeStyle = 'yellow'
+  // ctx.closePath()
+  ctx.stroke()
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<canvas id="c" style="border: 1px solid #aaaaaa; display: block;margin: auto;" width="400" height=300>
+  canvas not supported
+</canvas>
+
+<script>
+  let context = document.getElementById('c').getContext('2d')
+  let n = 0,
+    dx = 150,
+    dy = 150,
+    s = 100
+  // context.beginPath()
+
+  let g1 = context.createLinearGradient(10, 50, 10, 250)
+  g1.addColorStop(0.2, '#e55d87')
+  g1.addColorStop(0.8, '#5fa3f7')
+  context.fillStyle = g1
+  context.fillRect(10, 10, 350, 200)
+
+  context.fillStyle = 'green'
+  context.fillRect(10, 20, 150, 150)
+
+  context.strokeStyle = 'red'
+  context.lineWidth = 5
+  context.strokeRect(5, 10, 250, 250)
+
+  context.lineWidth = 1
+
+  context.strokeRect(5, 10, 250, 250)
+  context.beginPath()
+  context.fillStyle = 'pink'
+  context.strokeStyle = 'rgb(30, 150, 255)'
+  let x = Math.sin(0)
+  let y = Math.cos(0)
+  let dig = Math.PI / 15 * 7
+  for (let i = 0; i < 30; i++) {
+    let x = Math.sin(i * dig)
+    let y = Math.cos(i * dig)
+    context.lineTo(dx + x * s, dy + y * s)
+    console.log(x, y)
+  }
+  context.closePath()
+  context.fill()
+  context.stroke()
+
+</script>
+
+</body>
+</html>
