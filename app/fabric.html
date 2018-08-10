@@ -21,13 +21,24 @@
 
 <button onclick="outputPointLocation()">point locations</button>
 
-<canvas id="c" width="850" height="850" style="border:1px dashed #ccc"></canvas>
+<button onclick="rotateCanvas(Math.PI / 180 * 45)">rotate canvas</button>
+<button onclick="rotateCanvas(- Math.PI / 180 * 45)">reverse rotate canvas</button>
 
+<canvas id="c" width="850" height="850" style="border:1px dashed #ccc"></canvas>
 
 <script src="scripts/fabric.js"></script>
 <script>
   const canvas = new fabric.Canvas('c', {centeredRotation: true});
 
+  const vanilla_canvas = document.getElementById('c')
+  const ctx = vanilla_canvas.getContext('2d')
+
+  function rotateCanvas(angle) {
+    ctx.translate(vanilla_canvas.width / 2, vanilla_canvas.height / 2)
+    ctx.rotate(angle)
+    ctx.translate(-vanilla_canvas.width / 2, -vanilla_canvas.height / 2)
+    canvas.renderAll()
+  }
 
   let isDown = false,
     isImageLoaded = false
@@ -207,14 +218,29 @@
   //   }
   // });
 
-  canvas.on('object:moving', function (e) {
+  let prev_left,
+    prev_top
 
+  canvas.on('object:moving', function (e) {
 
     var p = e.target;
     // console.log(p)
 
+
     if (!isPointPositionLegal(p.left, p.top)) {
-      return
+      // console.log('OBJECT MOVING; point illegal', p.left, p.top)
+      if (p.left < leftPadding) {
+        p.left = leftPadding
+      }
+      if (p.top < topPadding) {
+        p.top = topPadding
+      }
+      if (p.left > canvas.width - leftPadding) {
+        p.left = canvas.width - leftPadding
+      }
+      if (p.top > canvas.height - topPadding) {
+        p.top = canvas.height - topPadding
+      }
     }
 
     p.line1 && p.line1.set({'x2': p.left, 'y2': p.top});
@@ -304,6 +330,7 @@
       rotateAngle += angle
       canvas.backgroundImage && canvas.backgroundImage.rotate(rotateAngle)
 
+      console.log('canvas', canvas)
       canvas.renderAll()
     }
   }
@@ -326,7 +353,7 @@
 
   function outputPointLocation() {
     let positions = []
-    let objs = canvas.getObjects().filter(o => o.type === 'circle')
+    const objs = canvas.getObjects().filter(o => o.type === 'circle')
     objs.forEach(o => {
       positions.push([transformHorizontalCoord(o.left), transformVerticalCoord(o.top)])
     })
